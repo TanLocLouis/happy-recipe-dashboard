@@ -4,6 +4,8 @@ import './App.css';
 import SignIn from './pages/SignIn/Signin';
 import TwoFactorAuth from './pages/TwoFactorAuth/TwoFactorAuth';
 import Home from './pages/Home/Home';
+import Profile from './pages/Profile/Profile';
+import { UserProvider } from './contexts/UserContext';
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
   const { signInState } = useAuthContext();
@@ -23,40 +25,64 @@ function AppContent() {
   const { signInState } = useAuthContext();
 
   return (
-    <Routes>
-      <Route path="/signin" element={<SignIn />} />
-      <Route
-        path="/2fa"
-        element={
-          <TwoFactorRoute>
-            <TwoFactorAuth />
-          </TwoFactorRoute>
-        }
-      />
-      <Route
-        path="/home"
-        element={
-          <ProtectedRoute>
-            <Home />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/"
-        element={
-          <Navigate
-            to={
-              signInState === 'authorized'
-                ? '/home'
-                : signInState === '2FA'
-                ? '/2fa'
-                : '/signin'
-            }
-            replace
-          />
-        }
-      />
-    </Routes>
+    <AuthProvider>
+    <UserProvider>
+
+      <Routes>
+        <Route path="/signin" element={<SignIn />} />
+        <Route
+          path="/2fa"
+          element={
+            <TwoFactorRoute>
+              <TwoFactorAuth />
+            </TwoFactorRoute>
+          }
+        />
+        <Route
+          path="/home"
+          element={
+            <ProtectedRoute>
+              <Home />
+            </ProtectedRoute>
+          }
+        />
+        {/* Own profile */}
+        <Route
+          path="/profile"
+          element={
+            // <ProtectedRoute>
+              <Profile />
+            // </ProtectedRoute>
+          }
+        />
+        {/* Moderator or other user profile by userId */}
+        <Route
+          path="/profile/:userId"
+          element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/"
+          element={
+            <Navigate
+              to={
+                signInState === 'authorized'
+                  ? '/home'
+                  : signInState === '2FA'
+                  ? '/2fa'
+                  : '/signin'
+              }
+              replace
+            />
+          }
+        />
+      </Routes>
+
+    </UserProvider>
+    </AuthProvider>
   );
 }
 

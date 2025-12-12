@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import './Home.css';
 import { useAuthContext } from '../../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 interface Post {
 	postId: string;
@@ -114,6 +115,11 @@ export default function Home() {
 		} finally {
 			setLoading(false);
 		}
+	};
+
+	const redirect = useNavigate();
+	const handleRoleBadgeClick = () => {
+		redirect('/profile');
 	};
 
 	const handleDeletePost = async (postId: string) => {
@@ -242,7 +248,7 @@ export default function Home() {
 					</p>
 				</div>
 				<div className="hero-actions">
-					<span className="role-badge">{role ? role.toUpperCase() : 'GUEST'}</span>
+					<span className="role-badge" onClick={() => handleRoleBadgeClick()}>{role ? role.toUpperCase() : 'GUEST'}</span>
 					<button className="ghost-button" onClick={signOut}>
 						Đăng xuất
 					</button>
