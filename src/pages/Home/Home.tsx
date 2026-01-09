@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, FormEvent } from 'react';
 import './Home.css';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -62,6 +62,10 @@ export default function Home() {
 	const [useCustomRange, setUseCustomRange] = useState(false);
 	const [customRangeStart, setCustomRangeStart] = useState('');
 	const [customRangeEnd, setCustomRangeEnd] = useState('');
+	const [commentSearch, setCommentSearch] = useState('');
+	const [userSearch, setUserSearch] = useState('');
+	const [userStatusFilter, setUserStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+	const [postStatusFilter, setPostStatusFilter] = useState<'all' | 'active' | 'deleted'>('all');
 
     useEffect(() => {
         requestNewAccessToken();
@@ -78,26 +82,37 @@ export default function Home() {
 		}
 	}, [activeTab]);
 
-	const fetchPosts = async () => {
+	const fetchPosts = async (
+		page = postPage,
+		limit = postLimit,
+		status: 'all' | 'active' | 'deleted' = postStatusFilter
+	) => {
 		setLoading(true);
 		try {
-			let url = `${import.meta.env.VITE_API_URL}/api/moderator/posts`;
-			
+			const params = new URLSearchParams();
+
 			if (useCustomRange && customRangeStart && customRangeEnd) {
-				url += `?start=${customRangeStart}&end=${customRangeEnd}`;
+				params.append('start', customRangeStart);
+				params.append('end', customRangeEnd);
 			} else {
-				url += `?page=${postPage}&limit=${postLimit}`;
+				params.append('page', page.toString());
+				params.append('limit', limit.toString());
 			}
 
-			url += `&includeDeleted=true`;
-			
-			const res = await fetchWithAuth(url);
+			if (status !== 'all') {
+				params.append('isDeleted', status === 'deleted' ? 'true' : 'false');
+			}
+
+
+			const res = await fetchWithAuth(
+				`${import.meta.env.VITE_API_URL}/api/moderator/posts?${params.toString()}`
+			);
 			if (res.ok) {
 				const data = await res.json();
 				console.log(data.posts);
 				setPosts(data.posts || []);
 				if (!useCustomRange) {
-					setPostPage((prev) => prev + 1);
+					setPostPage(page + 1);
 				}
 			}
 		} catch (error) {
@@ -107,11 +122,17 @@ export default function Home() {
 		}
 	};
 
-	const fetchComments = async () => {
+	const fetchComments = async (page = commentsPage, search = commentSearch) => {
 		setLoading(true);
 		try {
+			const params = new URLSearchParams();
+			params.append('page', page.toString());
+			if (search.trim()) {
+				params.append('search', search.trim());
+			}
+
 			const res = await fetchWithAuth(
-				`${import.meta.env.VITE_API_URL}/api/moderator/comments?page=${commentsPage}`
+				`${import.meta.env.VITE_API_URL}/api/moderator/comments?${params.toString()}`
 			);
 			if (res.ok) {
 				const data = await res.json();
@@ -124,11 +145,30 @@ export default function Home() {
 		}
 	};
 
-	const fetchUsers = async () => {
+	const handleSearchComments = (e: FormEvent<HTMLFormElement>) => {
+		e.preventDefault();
+		setCommentsPage(1);
+		fetchComments(1, commentSearch);
+	};
+
+	const fetchUsers = async (
+		page = usersPage,
+		search = userSearch,
+		status: 'all' | 'active' | 'inactive' = userStatusFilter
+	) => {
 		setLoading(true);
 		try {
+			const params = new URLSearchParams();
+			params.append('page', page.toString());
+			if (search.trim()) {
+				params.append('search', search.trim());
+			}
+			if (status !== 'all') {
+				params.append('isActive', status === 'active' ? 'true' : 'false');
+			}
+
 			const res = await fetchWithAuth(
-				`${import.meta.env.VITE_API_URL}/api/moderator/users?page=${usersPage}`
+				`${import.meta.env.VITE_API_URL}/api/moderator/users?${params.toString()}`
 			);
 			if (res.ok) {
 				const data = await res.json();
@@ -139,6 +179,24 @@ export default function Home() {
 		} finally {
 			setLoading(false);
 		}
+	};
+
+	const handleSearchUsers = (e: FormEvent<HTMLFormElement>) => {
+		e.preventDefault();
+		setUsersPage(1);
+		fetchUsers(1, userSearch, userStatusFilter);
+	};
+
+	const handlePostStatusFilterChange = (status: 'all' | 'active' | 'deleted') => {
+		setPostStatusFilter(status);
+		setPostPage(1);
+		fetchPosts(1, postLimit, status);
+	};
+
+	const handleStatusFilterChange = (status: 'all' | 'active' | 'inactive') => {
+		setUserStatusFilter(status);
+		setUsersPage(1);
+		fetchUsers(1, userSearch, status);
 	};
 
 	const redirect = useNavigate();
@@ -375,6 +433,60 @@ export default function Home() {
 					</button>
 				</div>
 
+				{activeTab === 'users' && (
+					<div className="user-search-bar">
+						<form className="user-search-form" onSubmit={handleSearchUsers}>
+							<input
+								className="user-search-input"
+								type="text"
+								placeholder="Tìm kiếm người dùng (email, tên, username)"
+								value={userSearch}
+								onChange={(e) => setUserSearch(e.target.value)}
+							/>
+							<button className="user-search-button" type="submit">
+								Tìm kiếm
+							</button>
+						</form>
+						<div className="user-filter-toggle">
+							<button
+								className={`filter-pill ${userStatusFilter === 'all' ? 'active' : ''}`}
+								onClick={() => handleStatusFilterChange('all')}
+							>
+								Tất cả
+							</button>
+							<button
+								className={`filter-pill ${userStatusFilter === 'active' ? 'active' : ''}`}
+								onClick={() => handleStatusFilterChange('active')}
+							>
+								Hoạt động
+							</button>
+							<button
+								className={`filter-pill ${userStatusFilter === 'inactive' ? 'active' : ''}`}
+								onClick={() => handleStatusFilterChange('inactive')}
+							>
+								Đã khóa
+							</button>
+						</div>
+					</div>
+				)}
+
+				{activeTab === 'comments' && (
+					<div className="user-search-bar">
+						<form className="user-search-form" onSubmit={handleSearchComments}>
+							<input
+								className="user-search-input"
+								type="text"
+								placeholder="Tìm kiếm bình luận (nội dung, người gửi)"
+								value={commentSearch}
+								onChange={(e) => setCommentSearch(e.target.value)}
+							/>
+							<button className="user-search-button" type="submit">
+								Tìm kiếm
+							</button>
+						</form>
+					</div>
+				)}
+
 				{activeTab === 'posts' && (
 					<div className="posts-filter-section">
 						<div className="filter-group">
@@ -399,7 +511,7 @@ export default function Home() {
 											onClick={() => {
 												setPostLimit(num);
 												setPostPage(1);
-												fetchPosts();
+												fetchPosts(1, num, postStatusFilter);
 											}}
 										>
 											{num}
@@ -447,6 +559,32 @@ export default function Home() {
 								</div>
 							)}
 						</div>
+
+						<div className="filter-group">
+							<span className="filter-label">Trạng thái bài viết</span>
+							<div className="user-filter-toggle">
+								<button
+									className={`filter-pill ${postStatusFilter === 'all' ? 'active' : ''}`}
+									onClick={() => handlePostStatusFilterChange('all')}
+								>
+									Tất cả
+								</button>
+								<button
+									className={`filter-pill ${postStatusFilter === 'active' ? 'active' : ''}`}
+									onClick={() => handlePostStatusFilterChange('active')}
+								>
+									Hoạt động
+								</button>
+								<button
+									className={`filter-pill ${postStatusFilter === 'deleted' ? 'active' : ''}`}
+									onClick={() => handlePostStatusFilterChange('deleted')}
+								>
+									Đã xóa
+								</button>
+							</div>
+						</div>
+
+
 					</div>
 				)}
 
@@ -594,7 +732,7 @@ export default function Home() {
 						)}
 						<div className="modal-actions">
 							<button className="btn-delete" onClick={() => {
-								handleDeletePost(selectedPost.postId);
+								handleDeletePost(selectedPost);
 								setSelectedPost(null);
 							}}>
 								Xóa bài viết
