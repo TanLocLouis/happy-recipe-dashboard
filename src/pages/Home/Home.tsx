@@ -3,7 +3,18 @@ import './Home.css';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
+interface Author {
+	authorName?: string;
+	displayName?: string;
+	email?: string;
+	isActive?: boolean;
+	authorImgUrl?: string;
+	role?: string;
+	userId: string;
+}
+
 interface Post {
+	author: Author;
 	postId: string;
 	title: string;
 	coverImgUrl?: string;
@@ -14,6 +25,7 @@ interface Post {
 	difficulty?: string;
 	description?: string;
 	createdAt: string;
+	isDeleted: boolean;
 }
 
 interface Comment {
@@ -42,6 +54,14 @@ export default function Home() {
 	const [loading, setLoading] = useState(false);
 	const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
+	const [postPage, setPostPage] = useState(1);
+	const [commentsPage, setCommentsPage] = useState(1);
+	const [usersPage, setUsersPage] = useState(1);
+	const [postLimit, setPostLimit] = useState(10);
+	const [useCustomRange, setUseCustomRange] = useState(false);
+	const [customRangeStart, setCustomRangeStart] = useState('');
+	const [customRangeEnd, setCustomRangeEnd] = useState('');
+
     useEffect(() => {
         requestNewAccessToken();
     }, [])
@@ -59,7 +79,17 @@ export default function Home() {
 	const fetchPosts = async () => {
 		setLoading(true);
 		try {
-			const res = await fetch(`${import.meta.env.VITE_API_URL}/api/moderator/posts?limit=50`, {
+			let url = `${import.meta.env.VITE_API_URL}/api/moderator/posts`;
+			
+			if (useCustomRange && customRangeStart && customRangeEnd) {
+				url += `?start=${customRangeStart}&end=${customRangeEnd}`;
+			} else {
+				url += `?page=${postPage}&limit=${postLimit}`;
+			}
+
+			url += `&includeDeleted=true`;
+			
+			const res = await fetch(url, {
 				headers: {
 					authorization: `Bearer ${accessToken}`,
 					'ngrok-skip-browser-warning': 'true',
@@ -67,7 +97,11 @@ export default function Home() {
 			});
 			if (res.ok) {
 				const data = await res.json();
+				console.log(data.posts);
 				setPosts(data.posts || []);
+				if (!useCustomRange) {
+					setPostPage((prev) => prev + 1);
+				}
 			}
 		} catch (error) {
 			console.error('Failed to fetch posts:', error);
@@ -80,7 +114,7 @@ export default function Home() {
 		setLoading(true);
 		try {
 			// Fetch comments from all posts - you may need a dedicated admin endpoint
-			const res = await fetch(`${import.meta.env.VITE_API_URL}/api/moderator/comments?limit=50`, {
+			const res = await fetch(`${import.meta.env.VITE_API_URL}/api/moderator/comments?${commentsPage}`, {
 				headers: {
 					authorization: `Bearer ${accessToken}`,
 					'ngrok-skip-browser-warning': 'true',
@@ -89,6 +123,7 @@ export default function Home() {
 			if (res.ok) {
 				const data = await res.json();
 				setComments(data.comments || []);
+				setCommentsPage((prev) => prev + 1);
 			}
 		} catch (error) {
 			console.error('Failed to fetch comments:', error);
@@ -100,7 +135,7 @@ export default function Home() {
 	const fetchUsers = async () => {
 		setLoading(true);
 		try {
-			const res = await fetch(`${import.meta.env.VITE_API_URL}/api/moderator/users?limit=50`, {
+			const res = await fetch(`${import.meta.env.VITE_API_URL}/api/moderator/users?page=${usersPage}`, {
 				headers: {
 					authorization: `Bearer ${accessToken}`,
 					'ngrok-skip-browser-warning': 'true',
@@ -109,6 +144,7 @@ export default function Home() {
 			if (res.ok) {
 				const data = await res.json();
 				setUsers(data.users || []);
+				setUsersPage((prev) => prev + 1);
 			}
 		} catch (error) {
 			console.error('Failed to fetch users:', error);
@@ -122,27 +158,79 @@ export default function Home() {
 		redirect('/profile');
 	};
 
-	const handleDeletePost = async (postId: string) => {
-		if (!confirm('Bạn có chắc muốn xóa bài viết này?')) return;
+	const handleDeletePost = async (post: Post) => {
+		if (post.isDeleted) {
+			if (!confirm('Bạn có chắc muốn khôi phục bài viết này?')) return;
+
+			try {
+				const res = await fetch(`${import.meta.env.VITE_API_URL}/api/moderator/posts/${post.postId}/restore`, {
+					method: 'PATCH',
+					headers: {
+						authorization: `Bearer ${accessToken}`,
+						'ngrok-skip-browser-warning': 'true',
+					},
+				});
+				if (res.ok) {
+					alert('Đã khôi phục bài viết');
+					fetchPosts();
+				} else {
+					alert('Không thể khôi phục bài viết');
+				}
+			} catch (error) {
+				alert('Lỗi khi khôi phục bài viết');
+			}
+		} else {
+			if (!confirm('Bạn có chắc muốn xóa bài viết này?')) return;
+
+			try {
+				const res = await fetch(`${import.meta.env.VITE_API_URL}/api/moderator/posts/${post.postId}`, {
+					method: 'DELETE',
+					headers: {
+						authorization: `Bearer ${accessToken}`,
+						'ngrok-skip-browser-warning': 'true',
+					},
+				});
+				if (res.ok) {
+					alert('Đã xóa bài viết');
+					fetchPosts();
+				} else {
+					alert('Không thể xóa bài viết');
+				}
+			} catch (error) {
+				alert('Lỗi khi xóa bài viết');
+			}
+		}
+	};
+
+	const handleNotifyUser = async (post: Post) => {
+		const message = prompt('Nhập nội dung thông báo cho tác giả:');
+		if (!message) return;
 
 		try {
-			const res = await fetch(`${import.meta.env.VITE_API_URL}/api/moderator/posts/${postId}`, {
-				method: 'DELETE',
+			const url = `${import.meta.env.VITE_API_URL}/api/moderator/posts/${post.postId}/notify`;
+			console.log('Sending notification to URL:', url);
+			const res = await fetch(`${import.meta.env.VITE_API_URL}/api/moderator/posts/${post.postId}/notify`, {
+				method: 'POST',
 				headers: {
+					'Content-Type': 'application/json',
 					authorization: `Bearer ${accessToken}`,
 					'ngrok-skip-browser-warning': 'true',
 				},
+				body: JSON.stringify({ message }),
 			});
+
 			if (res.ok) {
-				alert('Đã xóa bài viết');
+				alert('Đã gửi thông báo');
+				console.log(accessToken)
 				fetchPosts();
 			} else {
-				alert('Không thể xóa bài viết');
+				alert('Không thể gửi thông báo');
 			}
 		} catch (error) {
-			alert('Lỗi khi xóa bài viết');
+			alert('Lỗi khi gửi thông báo');
 		}
-	};
+	}
+
 
 	const handleDeleteComment = async (commentId: string) => {
 		if (!confirm('Bạn có chắc muốn xóa bình luận này?')) return;
@@ -234,8 +322,13 @@ export default function Home() {
 	};
 
 	const handleViewPost = (post: Post) => {
-		setSelectedPost(post);
+		// setSelectedPost(post);
+		window.open(`${import.meta.env.VITE_FRONTEND_URL}/post/${post.postId}`, '_blank');
 	};
+
+	const handleViewPostDetail = (post: Post) => {
+		setSelectedPost(post);
+	}
 
 	return (
 		<div className="home-page">
@@ -277,6 +370,81 @@ export default function Home() {
 					</button>
 				</div>
 
+				{activeTab === 'posts' && (
+					<div className="posts-filter-section">
+						<div className="filter-group">
+							<label>
+								<input
+									type="radio"
+									name="postRange"
+									checked={!useCustomRange}
+									onChange={() => {
+										setUseCustomRange(false);
+										setPostPage(1);
+									}}
+								/>
+								Chọn số lượng bài viết gần nhất
+							</label>
+							{!useCustomRange && (
+								<div className="quick-select">
+									{[10, 20, 50, 100].map((num) => (
+										<button
+											key={num}
+											className={`limit-btn ${postLimit === num ? 'active' : ''}`}
+											onClick={() => {
+												setPostLimit(num);
+												setPostPage(1);
+												fetchPosts();
+											}}
+										>
+											{num}
+										</button>
+									))}
+								</div>
+							)}
+						</div>
+
+						<div className="filter-group">
+							<label>
+								<input
+									type="radio"
+									name="postRange"
+									checked={useCustomRange}
+									onChange={() => setUseCustomRange(true)}
+								/>
+								Nhập khoảng bài viết cụ thể
+							</label>
+							{useCustomRange && (
+								<div className="custom-range">
+									<input
+										type="number"
+										placeholder="Từ bài viết thứ"
+										value={customRangeStart}
+										onChange={(e) => setCustomRangeStart(e.target.value)}
+									/>
+									<span>đến</span>
+									<input
+										type="number"
+										placeholder="Đến bài viết thứ"
+										value={customRangeEnd}
+										onChange={(e) => setCustomRangeEnd(e.target.value)}
+									/>
+									<button 
+										className="btn-fetch-range"
+										onClick={() => {
+											if (customRangeStart && customRangeEnd) {
+												fetchPosts();
+											}
+										}}
+									>
+										Tải bài viết
+									</button>
+								</div>
+							)}
+						</div>
+					</div>
+				)}
+
 				{loading ? (
 					<div className="loading">Đang tải...</div>
 				) : (
@@ -289,17 +457,33 @@ export default function Home() {
 											<img src={post.coverImgUrl} alt={post.title} className="item-image" />
 										)}
 										<div className="item-content">
+											<div className="flex items-center gap-3 mb-1">
+												{post.author.authorImgUrl && (
+													<img
+														className="author-image rounded-2xl object-cover w-10 h-10"
+														src={post.author.authorImgUrl} alt={post.author.authorName || 'Author'}/>
+												)}
+												<p className="item-meta">
+													Tác giả: {post.author.authorName || 'Unknown'} • {new Date(post.createdAt).toLocaleDateString('vi-VN')}
+												</p>
+											</div>
 											<h3>{post.title}</h3>
-											<p className="item-meta">
-												Tác giả: {post.authorName || 'Unknown'} • {new Date(post.createdAt).toLocaleDateString('vi-VN')}
-											</p>
 											{post.description && <p className="item-desc">{post.description.slice(0, 150)}...</p>}
 											<div className="item-actions">
+												{/* <button className="btn-view" onClick={() => handleViewPostDetail(post)}>
+													Xem thông tin cơ bản 
+												</button> */}
+
 												<button className="btn-view" onClick={() => handleViewPost(post)}>
-													Xem chi tiết
+													Mở bài viết gốc
 												</button>
-												<button className="btn-delete" onClick={() => handleDeletePost(post.postId)}>
-													Xóa
+
+												<button className="btn-delete" onClick={() => handleDeletePost(post)}>
+													{post.isDeleted ? 'Khôi phục bài viết đã xóa' : 'Xóa bài viết'}
+												</button>
+
+												<button className="btn-notify" onClick={() => handleNotifyUser(post)}>
+													Gửi thông báo cho tác giả
 												</button>
 											</div>
 										</div>
