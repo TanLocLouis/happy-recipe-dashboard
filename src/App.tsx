@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuthContext } from './contexts/AuthContext';
+import { AuthProvider, useAuthContext, initializeFetchWithAuth } from './contexts/AuthContext';
 import './App.css';
 import SignIn from './pages/SignIn/Signin';
 import TwoFactorAuth from './pages/TwoFactorAuth/TwoFactorAuth';
@@ -23,6 +23,10 @@ function TwoFactorRoute({ children }: { children: JSX.Element }) {
 
 function AppContent() {
   const { signInState } = useAuthContext();
+  const authContext = useAuthContext();
+
+  // Initialize fetch with auth context for automatic token refresh
+  initializeFetchWithAuth(authContext);
 
   return (
     <AuthProvider>

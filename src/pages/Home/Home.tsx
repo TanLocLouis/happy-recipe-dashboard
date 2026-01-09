@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import './Home.css';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { fetchWithAuth } from '../../lib/fetchWithAuth';
 
 interface Author {
 	authorName?: string;
@@ -67,6 +68,7 @@ export default function Home() {
     }, [])
 
 	useEffect(() => {
+		console.log(activeTab);
 		if (activeTab === 'posts') {
 			fetchPosts();
 		} else if (activeTab === 'comments') {
@@ -89,12 +91,7 @@ export default function Home() {
 
 			url += `&includeDeleted=true`;
 			
-			const res = await fetch(url, {
-				headers: {
-					authorization: `Bearer ${accessToken}`,
-					'ngrok-skip-browser-warning': 'true',
-				},
-			});
+			const res = await fetchWithAuth(url);
 			if (res.ok) {
 				const data = await res.json();
 				console.log(data.posts);
@@ -113,17 +110,12 @@ export default function Home() {
 	const fetchComments = async () => {
 		setLoading(true);
 		try {
-			// Fetch comments from all posts - you may need a dedicated admin endpoint
-			const res = await fetch(`${import.meta.env.VITE_API_URL}/api/moderator/comments?${commentsPage}`, {
-				headers: {
-					authorization: `Bearer ${accessToken}`,
-					'ngrok-skip-browser-warning': 'true',
-				},
-			});
+			const res = await fetchWithAuth(
+				`${import.meta.env.VITE_API_URL}/api/moderator/comments?page=${commentsPage}`
+			);
 			if (res.ok) {
 				const data = await res.json();
 				setComments(data.comments || []);
-				setCommentsPage((prev) => prev + 1);
 			}
 		} catch (error) {
 			console.error('Failed to fetch comments:', error);
@@ -135,16 +127,12 @@ export default function Home() {
 	const fetchUsers = async () => {
 		setLoading(true);
 		try {
-			const res = await fetch(`${import.meta.env.VITE_API_URL}/api/moderator/users?page=${usersPage}`, {
-				headers: {
-					authorization: `Bearer ${accessToken}`,
-					'ngrok-skip-browser-warning': 'true',
-				},
-			});
+			const res = await fetchWithAuth(
+				`${import.meta.env.VITE_API_URL}/api/moderator/users?page=${usersPage}`
+			);
 			if (res.ok) {
 				const data = await res.json();
 				setUsers(data.users || []);
-				setUsersPage((prev) => prev + 1);
 			}
 		} catch (error) {
 			console.error('Failed to fetch users:', error);
@@ -163,13 +151,10 @@ export default function Home() {
 			if (!confirm('Bạn có chắc muốn khôi phục bài viết này?')) return;
 
 			try {
-				const res = await fetch(`${import.meta.env.VITE_API_URL}/api/moderator/posts/${post.postId}/restore`, {
-					method: 'PATCH',
-					headers: {
-						authorization: `Bearer ${accessToken}`,
-						'ngrok-skip-browser-warning': 'true',
-					},
-				});
+				const res = await fetchWithAuth(
+					`${import.meta.env.VITE_API_URL}/api/moderator/posts/${post.postId}/restore`,
+					{ method: 'PATCH' }
+				);
 				if (res.ok) {
 					alert('Đã khôi phục bài viết');
 					fetchPosts();
@@ -183,13 +168,10 @@ export default function Home() {
 			if (!confirm('Bạn có chắc muốn xóa bài viết này?')) return;
 
 			try {
-				const res = await fetch(`${import.meta.env.VITE_API_URL}/api/moderator/posts/${post.postId}`, {
-					method: 'DELETE',
-					headers: {
-						authorization: `Bearer ${accessToken}`,
-						'ngrok-skip-browser-warning': 'true',
-					},
-				});
+				const res = await fetchWithAuth(
+					`${import.meta.env.VITE_API_URL}/api/moderator/posts/${post.postId}`,
+					{ method: 'DELETE' }
+				);
 				if (res.ok) {
 					alert('Đã xóa bài viết');
 					fetchPosts();
@@ -207,17 +189,16 @@ export default function Home() {
 		if (!message) return;
 
 		try {
-			const url = `${import.meta.env.VITE_API_URL}/api/moderator/posts/${post.postId}/notify`;
-			console.log('Sending notification to URL:', url);
-			const res = await fetch(`${import.meta.env.VITE_API_URL}/api/moderator/posts/${post.postId}/notify`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					authorization: `Bearer ${accessToken}`,
-					'ngrok-skip-browser-warning': 'true',
-				},
-				body: JSON.stringify({ message }),
-			});
+			const res = await fetchWithAuth(
+				`${import.meta.env.VITE_API_URL}/api/moderator/posts/${post.postId}/notify`,
+				{
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify({ message }),
+				}
+			);
 
 			if (res.ok) {
 				alert('Đã gửi thông báo');
@@ -231,18 +212,43 @@ export default function Home() {
 		}
 	}
 
+	const handleNotifyUserWarned = async (user: User) => {
+		const message = prompt('Nhập nội dung thông báo cho người dùng:');
+		if (!message) return;
+
+		try {
+			const res = await fetchWithAuth(
+				`${import.meta.env.VITE_API_URL}/api/moderator/users/${user.userId}/notify-warned`,
+				{
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify({ message }),
+				}
+			);
+
+			if (res.ok) {
+				alert('Đã gửi thông báo');
+				console.log(accessToken)
+				fetchUsers();
+			}
+			else {
+				alert('Không thể gửi thông báo');
+			}
+		} catch (error) {
+			alert('Lỗi khi gửi thông báo');
+		}
+	};
 
 	const handleDeleteComment = async (commentId: string) => {
 		if (!confirm('Bạn có chắc muốn xóa bình luận này?')) return;
 
 		try {
-			const res = await fetch(`${import.meta.env.VITE_API_URL}/api/moderator/comments/${commentId}`, {
-				method: 'DELETE',
-				headers: {
-					authorization: `Bearer ${accessToken}`,
-					'ngrok-skip-browser-warning': 'true',
-				},
-			});
+			const res = await fetchWithAuth(
+				`${import.meta.env.VITE_API_URL}/api/moderator/comments/${commentId}`,
+				{ method: 'DELETE' }
+			);
 			if (res.ok) {
 				alert('Đã xóa bình luận');
 				fetchComments();
@@ -256,15 +262,16 @@ export default function Home() {
 
 	const handleWarnUser = async (userId: string, reason: string) => {
 		try {
-			const res = await fetch(`${import.meta.env.VITE_API_URL}/api/moderator/users/${userId}/warn`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					authorization: `Bearer ${accessToken}`,
-					'ngrok-skip-browser-warning': 'true',
-				},
-				body: JSON.stringify({ reason }),
-			});
+			const res = await fetchWithAuth(
+				`${import.meta.env.VITE_API_URL}/api/moderator/users/${userId}/warn`,
+				{
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify({ reason }),
+				}
+			);
 			if (res.ok) {
 				alert('Đã cảnh cáo người dùng');
 			} else {
@@ -279,15 +286,16 @@ export default function Home() {
 		if (!confirm('Bạn có chắc muốn khóa tài khoản này?')) return;
 
 		try {
-			const res = await fetch(`${import.meta.env.VITE_API_URL}/api/moderator/users/${userId}/ban`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					authorization: `Bearer ${accessToken}`,
-					'ngrok-skip-browser-warning': 'true',
-				},
-				body: JSON.stringify({ reason }),
-			});
+			const res = await fetchWithAuth(
+				`${import.meta.env.VITE_API_URL}/api/moderator/users/${userId}/ban`,
+				{
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify({ reason }),
+				}
+			);
 			if (res.ok) {
 				alert('Đã khóa tài khoản');
 				fetchUsers();
@@ -303,13 +311,10 @@ export default function Home() {
 		if (!confirm('Bạn có chắc muốn mở khóa tài khoản này?')) return;
 
 		try {
-			const res = await fetch(`${import.meta.env.VITE_API_URL}/api/moderator/users/${userId}/unban`, {
-				method: 'POST',
-				headers: {
-					authorization: `Bearer ${accessToken}`,
-					'ngrok-skip-browser-warning': 'true',
-				},
-			});
+			const res = await fetchWithAuth(
+				`${import.meta.env.VITE_API_URL}/api/moderator/users/${userId}/unban`,
+				{ method: 'POST' }
+			);
 			if (res.ok) {
 				alert('Đã mở khóa tài khoản');
 				fetchUsers();
@@ -532,6 +537,7 @@ export default function Home() {
 												>
 													Cảnh cáo
 												</button>
+
 												{user.isActive ? (
 													<button
 														className="btn-ban"
@@ -550,6 +556,10 @@ export default function Home() {
 														Mở khóa
 													</button>
 												)}
+
+												<button className="btn-notify" onClick={() => handleNotifyUserWarned(user)}>
+													Gửi thông báo qua email
+												</button>
 											</div>
 										</div>
 									</div>

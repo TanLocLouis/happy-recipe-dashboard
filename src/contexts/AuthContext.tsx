@@ -368,3 +368,11 @@ export const useAuthContext = () => {
 
   return context;
 };
+
+// Initialize fetch with auth wrapper
+import { setAuthContext } from "../lib/fetchWithAuth";
+
+// This will be called in App.tsx or main.tsx after AuthProvider is set up
+export const initializeFetchWithAuth = (context: ReturnType<typeof useAuthContext>) => {
+  setAuthContext(context);
+};
