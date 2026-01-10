@@ -3,15 +3,30 @@ import "./App.css";
 import SignIn from "./pages/SignIn/Signin";
 import TwoFactorAuth from "./pages/TwoFactorAuth/TwoFactorAuth";
 import Home from "./pages/Home/Home";
+import Admin from "./pages/Admin/Admin";
 import Profile from "./pages/Profile/Profile";
 import React, { useEffect } from "react";
 import { useAuthStore } from "./stores/authStore";
 import { useUserStore } from "./stores/userStore";
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+function ProtectedRoute({
+  children,
+  allowedRoles,
+}: {
+  children: React.ReactNode;
+  allowedRoles?: Array<"USER" | "MODERATOR" | "ADMIN">;
+}) {
   const signInState = useAuthStore((state) => state.signInState);
+  const role = useAuthStore((state) => state.role);
 
-  if (signInState === "authorized") return children;
+  if (signInState === "authorized") {
+    if (allowedRoles && !allowedRoles.includes(role)) {
+      return <Navigate to="/home" replace />;
+    }
+    return children;
+  }
+
+  if (signInState === "2FA") return <Navigate to="/2fa" replace />;
   return <Navigate to="/signin" replace />;
 }
 
@@ -24,6 +39,7 @@ function TwoFactorRoute({ children }: { children: React.ReactNode }) {
 
 function App() {
   const signInState = useAuthStore((state) => state.signInState);
+  const role = useAuthStore((state) => state.role);
 
   useEffect(() => {
     if (signInState === "authorized") {
@@ -58,6 +74,14 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN"]}>
+              <Admin />
+            </ProtectedRoute>
+          }
+        />
         {/* Own profile */}
         <Route
           path="/profile"
@@ -81,7 +105,13 @@ function App() {
           element={
             <Navigate
               to={
-                signInState === "authorized" ? "/home" : signInState === "2FA" ? "/2fa" : "/signin"
+                signInState === "authorized"
+                  ? role === "ADMIN"
+                    ? "/admin"
+                    : "/home"
+                  : signInState === "2FA"
+                    ? "/2fa"
+                    : "/signin"
               }
               replace
             />

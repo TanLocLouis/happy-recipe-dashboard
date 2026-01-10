@@ -2,8 +2,15 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { AuthError } from "../errors/AuthError";
 
+const normalizeRole = (incomingRole?: string): "USER" | "MODERATOR" | "ADMIN" => {
+  const upperRole = incomingRole?.toUpperCase();
+  if (upperRole === "ADMIN" || upperRole === "MODERATOR" || upperRole === "USER") return upperRole;
+  return "USER";
+};
+
 interface authStoreType {
   role: "USER" | "MODERATOR" | "ADMIN";
+  setRole: (role: "USER" | "MODERATOR" | "ADMIN") => void;
   accessToken: string;
   setAccessToken: (accessToken: string) => void;
 
@@ -39,7 +46,8 @@ interface authStoreType {
 export const useAuthStore = create<authStoreType>()(
   persist(
     (set, get) => ({
-      role: "MODERATOR",
+      role: "USER",
+      setRole: (role: "USER" | "MODERATOR" | "ADMIN") => set({ role }),
       accessToken: "",
       refreshToken: "",
       twoFactorToken: "",
@@ -60,6 +68,7 @@ export const useAuthStore = create<authStoreType>()(
           refreshToken: "",
           twoFactorToken: "",
           signInState: "unauthorized",
+          role: "USER",
         });
       },
 
@@ -169,6 +178,8 @@ export const useAuthStore = create<authStoreType>()(
           if (!res.ok) throw get().throwAuthError(res.status);
 
           const data = await res.json();
+
+          set({ role: normalizeRole(data.user.role) });
           get().setUpToken(data.accessToken, data.refreshToken);
           get().setTwoFactorToken("");
 
@@ -245,6 +256,7 @@ export const useAuthStore = create<authStoreType>()(
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
         twoFactorToken: state.twoFactorToken,
+        role: state.role,
       }),
     }
   )

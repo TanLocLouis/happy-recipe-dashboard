@@ -12,16 +12,21 @@ export default function SignIn() {
   // const { signIn, signInState } = useAuthContext();
   const signIn = useAuthStore((state) => state.signIn);
   const signInState = useAuthStore((state) => state.signInState);
+  const role = useAuthStore((state) => state.role);
   const navigate = useNavigate();
 
   // Redirect if already authorized or pending 2FA
   useEffect(() => {
     if (signInState === "authorized") {
-      navigate("/home", { replace: true });
+      if (role === "ADMIN") {
+        navigate("/admin", { replace: true });
+      } else {
+        navigate("/home", { replace: true });
+      }
     } else if (signInState === "2FA") {
       navigate("/2fa", { replace: true });
     }
-  }, [signInState, navigate]);
+  }, [signInState, role, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

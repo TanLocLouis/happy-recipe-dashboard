@@ -7,7 +7,6 @@ import { useUserStore } from "@/stores/userStore";
 const Profile: React.FC = () => {
   const userInformation = useUserStore((state) => state.userInformation);
   const fetchUserInfo = useUserStore((state) => state.fetchUserInfo);
-  // const { role } = useAuthContext();
   const role = useAuthStore((state) => state.role);
 
   const navigate = useNavigate();

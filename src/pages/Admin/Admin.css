@@ -1,0 +1,155 @@
+.admin-page {
+	padding-bottom: 2rem;
+}
+
+.admin-action-buttons {
+	display: flex;
+	gap: 0.75rem;
+	align-items: center;
+	flex-wrap: wrap;
+}
+
+.admin-action-buttons .primary-button:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+	box-shadow: none;
+}
+
+.admin-planning {
+	margin-top: 2rem;
+	background: white;
+	border-radius: 1.25rem;
+	padding: 1.75rem;
+	box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
+	border: 1px solid #e2e8f0;
+}
+
+.planning-header {
+	display: flex;
+	justify-content: space-between;
+	gap: 1rem;
+	align-items: flex-start;
+}
+
+.planning-title {
+	margin: 0.25rem 0 0.5rem;
+	font-size: clamp(1.3rem, 2vw, 1.7rem);
+}
+
+.planning-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+	gap: 1rem;
+	margin: 1.25rem 0;
+}
+
+.planning-card {
+	border: 1px solid #e2e8f0;
+	border-radius: 1rem;
+	padding: 1.1rem;
+	background: #f8fafc;
+	box-shadow: 0 8px 28px rgba(15, 23, 42, 0.06);
+}
+
+.planning-card h3 {
+	margin: 0 0 0.35rem;
+	font-size: 1.05rem;
+}
+
+.planning-card p {
+	margin: 0;
+	color: #475569;
+	line-height: 1.5;
+}
+
+.empty-area {
+	margin-top: 1.25rem;
+	border: 1.5px dashed #cbd5e1;
+	border-radius: 1rem;
+	padding: 1.5rem;
+	background: #f8fafc;
+	text-align: center;
+}
+
+.empty-dashed {
+	height: 120px;
+	border: 1.5px dashed #e2e8f0;
+	border-radius: 0.75rem;
+	background: repeating-linear-gradient(
+			-45deg,
+			rgba(99, 102, 241, 0.05),
+			rgba(99, 102, 241, 0.05) 10px,
+			transparent 10px,
+			transparent 20px
+		),
+		white;
+}
+
+.empty-text {
+	margin: 0.75rem 0 0;
+	color: #475569;
+}
+
+@media (max-width: 768px) {
+	.planning-header {
+		flex-direction: column;
+	}
+}
+
+.moderator-section {
+	margin-top: 2rem;
+	background: white;
+	border-radius: 1.25rem;
+	padding: 1.5rem;
+	box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
+	border: 1px solid #e2e8f0;
+}
+
+.moderator-header {
+	display: flex;
+	justify-content: space-between;
+	gap: 1rem;
+	flex-wrap: wrap;
+	align-items: flex-end;
+}
+
+.moderator-form {
+	display: flex;
+	gap: 0.75rem;
+	flex-wrap: wrap;
+	align-items: center;
+}
+
+.moderator-form input {
+	padding: 0.7rem 1rem;
+	border: 1.5px solid #e2e8f0;
+	border-radius: 0.75rem;
+	min-width: 240px;
+	font-size: 0.95rem;
+}
+
+.moderator-error {
+	color: #dc2626;
+	margin: 0.75rem 0;
+}
+
+.moderator-list {
+	margin-top: 1rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.moderator-card {
+	display: flex;
+	justify-content: space-between;
+	gap: 1rem;
+	padding: 1rem;
+	border: 1px solid #e2e8f0;
+	border-radius: 0.9rem;
+	background: #f8fafc;
+}
+
+.moderator-card h3 {
+	margin: 0 0 0.35rem;
+}
