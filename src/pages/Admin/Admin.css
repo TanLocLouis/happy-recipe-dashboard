@@ -96,6 +96,63 @@
 	}
 }
 
+.admin-stats {
+	margin-top: 1.5rem;
+	background: white;
+	border-radius: 1.25rem;
+	padding: 1.5rem;
+	box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
+	border: 1px solid #e2e8f0;
+}
+
+.stats-header {
+	display: flex;
+	justify-content: space-between;
+	gap: 1rem;
+	flex-wrap: wrap;
+	align-items: flex-end;
+}
+
+.stats-actions {
+	display: flex;
+	gap: 0.5rem;
+}
+
+.stats-grid-compact {
+	margin-top: 1rem;
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+	gap: 1rem;
+}
+
+.stat-card.compact {
+	background: #f8fafc;
+	border: 1px solid #e2e8f0;
+	padding: 1rem;
+	border-radius: 1rem;
+}
+
+.stat-rows {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 0.4rem;
+}
+
+.stat-row {
+	display: flex;
+	justify-content: space-between;
+	color: #475569;
+	font-weight: 600;
+}
+
+.stat-row strong {
+	color: #0f172a;
+}
+
+.actions-row {
+    margin-top: 1em;
+}
+
 .moderator-section {
 	margin-top: 2rem;
 	background: white;

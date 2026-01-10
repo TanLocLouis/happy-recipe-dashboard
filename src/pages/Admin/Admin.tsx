@@ -14,6 +14,19 @@ interface Moderator {
 	createdAt?: string;
 }
 
+interface PeriodStats {
+	day: number;
+	week: number;
+	month: number;
+	year: number;
+}
+
+interface AdminStats {
+	posts: PeriodStats;
+	comments: PeriodStats;
+	newAccounts: PeriodStats;
+}
+
 const roadmapItems = [
 	{
 		title: "Quản lý phân quyền",
@@ -40,6 +53,9 @@ export default function Admin() {
 	const [creating, setCreating] = useState(false);
 	const [newEmail, setNewEmail] = useState("");
 	const [error, setError] = useState("");
+	const [stats, setStats] = useState<AdminStats | null>(null);
+	const [statsLoading, setStatsLoading] = useState(false);
+	const [statsError, setStatsError] = useState("");
 
 	const sortedModerators = useMemo(
 		() =>
@@ -56,7 +72,23 @@ export default function Admin() {
 
 	useEffect(() => {
 		void fetchModerators();
+		void fetchStats();
 	}, []);
+
+	const fetchStats = async () => {
+		setStatsLoading(true);
+		setStatsError("");
+		try {
+			const res = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/api/admin/stats`);
+			if (!res.ok) throw new Error("Không tải được thống kê");
+			const data = await res.json();
+			setStats(data as AdminStats);
+		} catch (err: any) {
+			setStatsError(err.message || "Có lỗi xảy ra khi tải thống kê");
+		} finally {
+			setStatsLoading(false);
+		}
+	};
 
 	const fetchModerators = async () => {
 		setLoadingMods(true);
@@ -132,7 +164,75 @@ export default function Admin() {
 				</div>
 			</header>
 
-			<section className="stats-grid">
+			<section className="actions-row">
+				<div className="action-card">
+					<h3>Điều phối moderator</h3>
+					<p>Tái sử dụng layout phần trên của trang moderator để xem nhanh trạng thái chung.</p>
+					<div className="admin-action-buttons">
+						<button className="primary-button" onClick={() => navigate("/home")}>Chuyển tới Moderator</button>
+						<button className="secondary-button" onClick={() => navigate("/profile")}>
+							Hồ sơ cá nhân
+						</button>
+					</div>
+				</div>
+				{/* <div className="action-card">
+					<h3>Thiết lập hệ thống</h3>
+					<p>Placeholder cho cấu hình domain, SMTP, và ngưỡng cảnh báo.</p>
+					<div className="admin-action-buttons">
+						<button className="primary-button" disabled>
+							Đang thiết kế
+						</button>
+					</div>
+				</div> */}
+			</section>
+
+			<section className="admin-stats">
+				<div className="stats-header">
+					<div>
+						<p className="hero-kicker">Thống kê</p>
+						<h2 className="planning-title">Bài đăng · Bình luận · Tài khoản mới</h2>
+						<p className="hero-subtitle">Theo dõi nhanh theo ngày, tuần, tháng, năm.</p>
+					</div>
+					<div className="stats-actions">
+						<button className="ghost-button" onClick={fetchStats} disabled={statsLoading}>
+							{statsLoading ? "Đang tải..." : "Làm mới"}
+						</button>
+					</div>
+				</div>
+
+				{statsError && <p className="moderator-error">{statsError}</p>}
+
+				<div className="stats-grid-compact">
+					{["posts", "comments", "newAccounts"].map((key) => {
+						const labelMap: Record<string, string> = {
+							posts: "Bài đăng",
+							comments: "Bình luận",
+							newAccounts: "Tài khoản mới",
+						};
+						const stat = stats ? (stats as any)[key] as PeriodStats : null;
+
+						return (
+							<div key={key} className="stat-card compact">
+								<p className="stat-label">{labelMap[key]}</p>
+								{statsLoading ? (
+									<p className="stat-value">...</p>
+								) : stat ? (
+									<div className="stat-rows">
+										<div className="stat-row"><span>Ngày</span><strong>{stat.day ?? 0}</strong></div>
+										<div className="stat-row"><span>Tuần</span><strong>{stat.week ?? 0}</strong></div>
+										<div className="stat-row"><span>Tháng</span><strong>{stat.month ?? 0}</strong></div>
+										<div className="stat-row"><span>Năm</span><strong>{stat.year ?? 0}</strong></div>
+									</div>
+								) : (
+									<p className="stat-value">--</p>
+								)}
+							</div>
+						);
+					})}
+				</div>
+			</section>
+
+			{/* <section className="stats-grid">
 				<div className="stat-card">
 					<p className="stat-label">Trạng thái hệ thống</p>
 					<p className="stat-value">Stable</p>
@@ -148,31 +248,9 @@ export default function Admin() {
 					<p className="stat-value">--</p>
 					<p className="stat-note">Đang lên kế hoạch hiển thị</p>
 				</div>
-			</section>
+			</section> */}	
 
-			<section className="actions-row">
-				<div className="action-card">
-					<h3>Điều phối moderator</h3>
-					<p>Tái sử dụng layout phần trên của trang moderator để xem nhanh trạng thái chung.</p>
-					<div className="admin-action-buttons">
-						<button className="primary-button" onClick={() => navigate("/home")}>Chuyển tới Moderator</button>
-						<button className="secondary-button" onClick={() => navigate("/profile")}>
-							Hồ sơ cá nhân
-						</button>
-					</div>
-				</div>
-				<div className="action-card">
-					<h3>Thiết lập hệ thống</h3>
-					<p>Placeholder cho cấu hình domain, SMTP, và ngưỡng cảnh báo.</p>
-					<div className="admin-action-buttons">
-						<button className="primary-button" disabled>
-							Đang thiết kế
-						</button>
-					</div>
-				</div>
-			</section>
-
-			<section className="admin-planning">
+			{/* <section className="admin-planning">
 				<div className="planning-header">
 					<div>
 						<p className="hero-kicker">Roadmap</p>
@@ -200,7 +278,7 @@ export default function Admin() {
 						thành API.
 					</p>
 				</div>
-			</section>
+			</section> */}
 
 			<section className="moderator-section">
 				<div className="moderator-header">
