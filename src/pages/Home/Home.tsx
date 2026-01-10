@@ -219,6 +219,7 @@ export default function Home() {
         );
         if (res.ok) {
           alert("Đã khôi phục bài viết");
+          handleNotifyUser(post, "Bài viết của bạn đã được khôi phục bởi quản trị viên.");
           fetchPosts();
         } else {
           alert("Không thể khôi phục bài viết");
@@ -236,6 +237,7 @@ export default function Home() {
         );
         if (res.ok) {
           alert("Đã xóa bài viết");
+          handleNotifyUser(post, "Bài viết của bạn đã bị xóa bởi quản trị viên.");
           fetchPosts();
         } else {
           alert("Không thể xóa bài viết");
@@ -246,9 +248,15 @@ export default function Home() {
     }
   };
 
-  const handleNotifyUser = async (post: Post) => {
-    const message = prompt("Nhập nội dung thông báo cho tác giả:");
-    if (!message) return;
+  const handleNotifyUser = async (post: Post, defaultMessage?: string) => {
+    let message: string | null = null;
+
+    if (!defaultMessage) {
+      const message = prompt("Nhập nội dung thông báo cho tác giả:");
+      if (!message) return;
+    } else {
+      message = defaultMessage;
+    }
 
     try {
       const res = await fetchWithAuth(
