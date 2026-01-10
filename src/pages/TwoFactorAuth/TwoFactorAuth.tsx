@@ -1,42 +1,37 @@
-import { useState, useCallback, useEffect, ChangeEvent, FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuthContext } from '../../contexts/AuthContext';
-import './TwoFactorAuth.css';
+import { useState, useCallback, useEffect, type ChangeEvent, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
+import "./TwoFactorAuth.css";
+import { useAuthStore } from "@/stores/authStore";
 
 export default function TwoFactorAuth() {
   const navigate = useNavigate();
-  const { verify2FA, signInState, twoFactorToken } = useAuthContext();
-  const [code, setCode] = useState('');
+  const verify2FA = useAuthStore((state) => state.verify2FA);
+  const signInState = useAuthStore((state) => state.signInState);
+  const twoFactorToken = useAuthStore((state) => state.twoFactorToken);
+  const [code, setCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   // Redirect if not in 2FA state or if already authorized
   useEffect(() => {
-    if (signInState === 'authorized') {
-      navigate('/home', { replace: true });
-    } else if (signInState === 'unauthorized') {
-      navigate('/signin', { replace: true });
+    if (signInState === "authorized") {
+      navigate("/home", { replace: true });
+    } else if (signInState === "unauthorized") {
+      navigate("/signin", { replace: true });
     }
   }, [signInState, navigate]);
 
-  // Redirect if no 2FA token
-  useEffect(() => {
-    if (!twoFactorToken) {
-      navigate('/signin', { replace: true });
-    }
-  }, [twoFactorToken, navigate]);
-
   const handleCodeChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+    const value = e.target.value.replace(/\D/g, "").slice(0, 6);
     setCode(value);
-    setError('');
+    setError("");
   }, []);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    
+
     if (code.length !== 6) {
-      setError('Vui lòng nhập đầy đủ 6 chữ số');
+      setError("Vui lòng nhập đầy đủ 6 chữ số");
       return;
     }
 
@@ -44,21 +39,21 @@ export default function TwoFactorAuth() {
     try {
       const success = await verify2FA(code);
       if (success) {
-        navigate('/home', { replace: true });
+        navigate("/home", { replace: true });
       } else {
-        setError('Mã 2FA không chính xác. Vui lòng thử lại.');
-        setCode('');
+        setError("Mã 2FA không chính xác. Vui lòng thử lại.");
+        setCode("");
       }
     } catch (err) {
-      setError('Có lỗi xảy ra. Vui lòng thử lại.');
-      setCode('');
+      setError("Có lỗi xảy ra. Vui lòng thử lại.");
+      setCode("");
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleBackToSignIn = () => {
-    navigate('/signin', { replace: true });
+    navigate("/signin", { replace: true });
   };
 
   return (
@@ -86,9 +81,7 @@ export default function TwoFactorAuth() {
             </svg>
           </div>
           <h1 className="twofa-title">Xác thực 2 lớp</h1>
-          <p className="twofa-subtitle">
-            Nhập mã xác thực được gửi đến email của bạn
-          </p>
+          <p className="twofa-subtitle">Nhập mã xác thực được gửi đến email của bạn</p>
         </div>
 
         <form onSubmit={handleSubmit} className="twofa-form">
@@ -100,7 +93,7 @@ export default function TwoFactorAuth() {
               value={code}
               onChange={handleCodeChange}
               maxLength={6}
-              className={`code-input ${error ? 'error' : ''}`}
+              className={`code-input ${error ? "error" : ""}`}
               disabled={isLoading}
               autoFocus
             />
@@ -108,16 +101,10 @@ export default function TwoFactorAuth() {
 
           {error && <p className="error-message">{error}</p>}
 
-          <p className="code-hint">
-            Nhập 6 chữ số từ email xác thực của bạn
-          </p>
+          <p className="code-hint">Nhập 6 chữ số từ email xác thực của bạn</p>
 
-          <button
-            type="submit"
-            className="submit-button"
-            disabled={isLoading || code.length !== 6}
-          >
-            {isLoading ? 'Đang xác thực...' : 'Xác thực'}
+          <button type="submit" className="submit-button" disabled={isLoading || code.length !== 6}>
+            {isLoading ? "Đang xác thực..." : "Xác thực"}
           </button>
 
           <button
