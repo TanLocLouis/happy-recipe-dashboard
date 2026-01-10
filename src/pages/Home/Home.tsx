@@ -252,7 +252,7 @@ export default function Home() {
     let message: string | null = null;
 
     if (!defaultMessage) {
-      const message = prompt("Nhập nội dung thông báo cho tác giả:");
+      message = prompt("Nhập nội dung thông báo cho tác giả:");
       if (!message) return;
     } else {
       message = defaultMessage;
